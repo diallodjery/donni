@@ -385,7 +385,7 @@ RÈGLES :
 - Format simple : peu de markdown, des listes courtes
 - Termine parfois par une question ou encouragement en bambara`;
 
-const API = 'https://api.anthropic.com/v1/messages';
+const API = 'https://api.grok.com/v1/chat/completions';
 let loading = false;
 let recognition = null;
 let isListening = false;
@@ -441,11 +441,14 @@ async function ask(text) {
     const res = await fetch(API, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+      'Bearer gsk_xFN0CIY0wM7e4zQslwQWGdyb3FYd6OhuUNI2VjvCb77SeE4X6FS'
+     body: JSON.stringify({
+        model:'llama3-70b-8192',
         max_tokens:1000,
-        system: SYSTEM,
-        messages:[{role:'user', content:text}]
+        messages:[
+          {role:'system',content:SYSTEM},
+          {role:'user',content:text}
+        ]
       })
     });
     const data = await res.json();
