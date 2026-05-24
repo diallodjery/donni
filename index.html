@@ -139,7 +139,7 @@ inp.value='';inp.style.height='auto';
 addMsg(text,'usr');
 const ty=addTyping();
 try{
-const r=await fetch(EP,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+K},body:JSON.stringify({model:'llama3-70b-8192',max_tokens:1000,messages:[{role:'system',content:SYS},{role:'user',content:text}]})});
+const r=await fetch(EP,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+K},body:JSON.stringify({model:'mixtral-8x7b-32768',max_tokens:1000,messages:[{role:'system',content:SYS},{role:'user',content:text}]})});
 const d=await r.json();ty.remove();
 const rep=d.choices?.[0]?.message?.content||"Desole erreur. Reessaie.";
 addMsg(rep,'ai');speakText(rep);
