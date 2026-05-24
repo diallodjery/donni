@@ -453,7 +453,7 @@ async function ask(text) {
     });
     const data = await res.json();
     typingEl.remove();
-    const reply = data.content?.[0]?.text || "Désolé, erreur. Réessaie.";
+    const reply = data.choices?.[0]?.message?.content || "Désolé, erreur. Réessaie.";
     lastAIText = reply;
     addMsg(reply, 'ai');
     offerTTS(reply);
