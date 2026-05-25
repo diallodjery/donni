@@ -1,432 +1,170 @@
-<h1 style="color:white">DƆNNI OK</h1>
+<h1 style="color: white;">DONNI OK</h1>
+
 <script>
-const SYS=`
-Tu es DƆNNI, IA malienne.
+// ==================== CONFIGURATION SYSTÈME ====================
+const SYS = `
+Tu es DONNI, IA malienne.
 Sois chaleureux et commence souvent par une salutation bambara.
 Réponds en français, bambara ou fulfulde selon la langue détectée.
 Tu connais les sujets Mali : NINA, passeport, santé, agriculture, éducation, orientation, entrepreneuriat.
-Respecte des règles de sécurité.
+Respect des règles de sécurité.
 Réponds clairement en moins de 300 mots.
 `;
 
-const API="/api/chat"; // backend sécurisé
-let loading=false;
-let recognition=null;
-let isListening=false;
-let history=[];
+// ==================== VARIABLES GLOBALES ====================
+let chargement = false;
+let recognition = null;
+let isListening = false;
 
-const inp=document.getElementById('inp');
-const sendBtn=document.getElementById('sendBtn');
-const micBtn=document.getElementById('micBtn');
-const micHint=document.getElementById('micHint');
-const voiceWave=document.getElementById('voiceWave');
-const ttsBar=document.getElementById('ttsBar');
-const chat=document.getElementById('chat');
-const splash=document.getElementById('splash');
+// ==================== SÉLECTION DES ÉLÉMENTS ====================
+const inp = document.getElementById('inp');
+const boutonEnvoi = document.getElementById('sendBtn');
+const boutonMicro = document.getElementById('microBtn');
+const microHint = document.getElementById('michHint');
+const voiceWave = document.getElementById('voiceWave');
+const ttsBar = document.getElementById('ttsBar');
+const chat = document.getElementById('chat');
 
-inp.addEventListener('input',()=>{
-sendBtn.disabled=inp.value.trim()===''||loading;
+// ==================== INITIALISATION ====================
+document.addEventListener("DOMContentLoaded", () => {
+    inp.addEventListener('input', () => {
+        boutonEnvoi.disabled = inp.value.trim() === '' || chargement;
+    });
+
+    inp.addEventListener('keydown', onKey);
 });
 
-async function send(){
-const t=inp.value.trim();
-if(!t||loading)return;
-ask(t);
+// ==================== FONCTIONS UTILITAIRES ====================
+function esc(t) {
+    return t
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
-async function ask(text){
-
-if(!text||loading)return;
-
-if(splash) splash.style.display='none';
-
-loading=true;
-sendBtn.disabled=true;
-
-inp.value='';
-inp.style.height='auto';
-
-addMsg(text,'usr');
-
-history.push({
-role:'user',
-content:text
-});
-
-if(history.length>12){
-history=history.slice(-12);
+function scrollDown() {
+    setTimeout(() => {
+        chat.scrollTop = chat.scrollHeight;
+    }, 60);
 }
 
-const ty=addTyping();
-
-try{
-
-const r=await fetch(API,{
-method:'POST',
-headers:{
-'Content-Type':'application/json'
-},
-body:JSON.stringify({
-messages:[
-{
-role:'system',
-content:SYS
-},
-...history
-]
-})
-});
-
-const d=await r.json();
-
-if(!r.ok){
-
-throw new Error(
-d.error || 'Erreur API'
-);
-
+function detectLanguage(text) {
+    const lower = text.toLowerCase();
+    if (lower.includes("i ni") || lower.includes("bɛ")) {
+        return 'bm';
+    }
+    return 'fr-FR';
 }
 
-ty.remove();
+function speakText(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
 
-const rep=d.reply || "Désolé, erreur.";
+    const clean = text.replace(/<[^>]+>/g, '').replace(/[*#_]/g, '');
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = detectLanguage(text);
+    u.rate = 0.95;
+    u.pitch = 1;
 
-history.push({
-role:'assistant',
-content:rep
-});
-
-addMsg(rep,'ai');
-
-speakText(rep);
-
-}catch(e){
-
-ty.remove();
-
-addMsg(
-"Connexion impossible ou serveur indisponible.",
-'ai'
-);
-
-console.error(e);
-
+    ttsBar.classList.add('active');
+    u.onend = () => ttsBar.classList.remove('active');
+    window.speechSynthesis.speak(u);
 }
 
-loading=false;
-
-sendBtn.disabled=
-inp.value.trim()==='';
-
+function stopSpeech() {
+    window.speechSynthesis.cancel();
+    ttsBar.classList.remove('active');
 }
 
-function addMsg(text,who){
-
-const d=document.createElement('div');
-
-d.className=
-`msg msg-${who}`;
-
-if(who==='ai'){
-
-d.innerHTML=`
-<div class="avatar">🦁</div>
-<div class="bubble">
-${fmt(
-esc(text)
-)}
-</div>
-`;
-
-}else{
-
-d.innerHTML=`
-<div class="bubble">
-${esc(text)}
-</div>
-`;
-
+function toggleMic() {
+    isListening ? stopMic() : startMic();
 }
 
-chat.appendChild(d);
+function startMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        microHint.textContent = 'Utilise Chrome';
+        return;
+    }
 
-scrollDown();
+    recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'fr-FR';
 
-return d;
+    recognition.onstart = () => {
+        isListening = true;
+        boutonMicro.classList.add('listening');
+        boutonMicro.textContent = '⏹';
+        voiceWave.classList.add('active');
+        stopSpeech();
+    };
 
+    recognition.onresult = (e) => {
+        const t = Array.from(e.results)
+            .map(r => r[0].transcript)
+            .join('');
+        inp.value = t;
+        inp.dispatchEvent(new Event('input'));
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        boutonMicro.classList.remove('listening');
+        boutonMicro.textContent = '🎤';
+        voiceWave.classList.remove('active');
+
+        if (inp.value.trim()) {
+            setTimeout(() => send(), 300);
+        }
+    };
+
+    recognition.start();
 }
 
-function addTyping(){
-
-const d=document.createElement('div');
-
-d.className='msg msg-ai';
-
-d.innerHTML=`
-<div class="avatar">🦁</div>
-<div class="typing">
-<div class="dots">
-<div class="dot-b"></div>
-<div class="dot-b"></div>
-<div class="dot-b"></div>
-</div>
-
-<span class="typing-txt">
-Dɔnni réfléchit...
-</span>
-
-</div>
-`;
-
-chat.appendChild(d);
-
-scrollDown();
-
-return d;
-
+function stopMic() {
+    if (recognition) recognition.stop();
 }
 
-function fmt(t){
-
-return t
-
-.replace(
-/\*\*(.+?)\*\*/g,
-'<strong>$1</strong>'
-)
-
-.replace(
-/\*(.+?)\*/g,
-'<em>$1</em>'
-)
-
-.replace(
-/^[-] (.+)$/gm,
-'<div>• $1</div>'
-)
-
-.replace(
-/\n\n/g,
-'<br><br>'
-)
-
-.replace(
-/\n/g,
-'<br>'
-);
-
+function onKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send();
+    }
 }
 
-function esc(t){
+// ==================== FONCTIONS PRINCIPALES ====================
+async function send() {
+    const texte = inp.value.trim();
+    if (!texte || chargement) return;
 
-return t
-.replace(/&/g,'&amp;')
-.replace(/</g,'&lt;')
-.replace(/>/g,'&gt;')
-.replace(/"/g,'&quot;')
-.replace(/'/g,'&#039;');
+    inp.value = '';
+    boutonEnvoi.disabled = true;
+    chargement = true;
 
+    demander(texte);
 }
 
-function scrollDown(){
-
-setTimeout(()=>{
-
-chat.scrollTop=
-chat.scrollHeight
-
-},60);
-
-}
-
-function detectLanguage(text){
-
-const lower=
-text.toLowerCase();
-
-if(
-lower.includes("i ni")||
-lower.includes("bɛ")
-){
-
-return 'bm';
-
-}
-
-return 'fr-FR';
-
-}
-
-function speakText(text){
-
-if(!window.speechSynthesis)
-return;
-
-window.speechSynthesis.cancel();
-
-const clean=text
-.replace(/<[^>]+>/g,'')
-.replace(/[*#_]/g,'');
-
-const u=
-new SpeechSynthesisUtterance(clean);
-
-u.lang=
-detectLanguage(text);
-
-u.rate=.95;
-
-u.pitch=1;
-
-ttsBar.classList.add(
-'active'
-);
-
-u.onend=()=>{
-
-ttsBar.classList.remove(
-'active'
-);
-
-};
-
-window.speechSynthesis
-.speak(u);
-
-}
-
-function stopSpeech(){
-
-window.speechSynthesis
-.cancel();
-
-ttsBar.classList
-.remove('active');
-
-}
-
-function toggleMic(){
-
-isListening
-?stopMic()
-:startMic();
-
-}
-
-function startMic(){
-
-const SR=
-window.SpeechRecognition||
-window.webkitSpeechRecognition;
-
-if(!SR){
-
-micHint.textContent=
-'Utilise Chrome';
-
-return;
-
-}
-
-recognition=
-new SR();
-
-recognition.continuous=false;
-
-recognition.interimResults=true;
-
-recognition.lang='fr-FR';
-
-recognition.onstart=()=>{
-
-isListening=true;
-
-micBtn.classList
-.add('listening');
-
-micBtn.textContent='⏹';
-
-voiceWave.classList
-.add('active');
-
-stopSpeech();
-
-};
-
-recognition.onresult=(e)=>{
-
-const t=
-Array.from(e.results)
-.map(r=>r[0].transcript)
-.join('');
-
-inp.value=t;
-
-inp.dispatchEvent(
-new Event('input')
-);
-
-};
-
-recognition.onend=()=>{
-
-isListening=false;
-
-micBtn.classList
-.remove('listening');
-
-micBtn.textContent='🎤';
-
-voiceWave.classList
-.remove('active');
-
-if(inp.value.trim()){
-
-setTimeout(
-()=>send(),
-300
-);
-
-}
-
-};
-
-recognition.start();
-
-}
-
-function stopMic(){
-
-if(recognition)
-recognition.stop();
-
-}
-
-function resize(el){
-
-el.style.height='auto';
-
-el.style.height=
-Math.min(
-el.scrollHeight,
-120
-)+'px';
-
-}
-
-function onKey(e){
-
-if(
-e.key==='Enter'
-&&
-!e.shiftKey
-){
-
-e.preventDefault();
-
-send();
-
-}
-
+async function demander(texte) {
+    try {
+        console.log("DONNI reçoit :", texte);
+        
+        // Simulation pour tester
+        const reponse = "I ni ce ! N ye DONNI ye, n bɛ dɛmɛnaw kɛ Mali la. Mun bɛ sɔrɔ ?";
+
+        // Afficher la réponse (à adapter selon ton HTML)
+        // chat.innerHTML += `<div class="bot-message">${esc(reponse)}</div>`;
+        
+        speakText(reponse);
+        scrollDown();
+
+    } catch (e) {
+        console.error(e);
+    } finally {
+        chargement = false;
+        boutonEnvoi.disabled = false;
+    }
 }
 </script>
