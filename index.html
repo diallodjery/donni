@@ -70,172 +70,167 @@ textarea::placeholder{color:rgba(245,230,200,.2);}
 <div class="splash" id="splash">
 <div class="splash-emoji">🦁</div>
 <div class="splash-title">I ni ce ! Bonjour !</div>
-<div class="splash-sub">Je suis <strong style="color:#FFD700">Dɔnni</strong>, ta première IA malienne.<br>Pose-moi n'importe quelle question !<br><em style="font-size:10px">Français · Bambara · Fulfulde · Songhay</em></div>
+<div class="splash-sub">Je suis <strong style="color:#FFD700">Dɔnni</strong>, ta premiere IA malienne.<br>Pose-moi n'importe quelle question !<br><em style="font-size:10px">Francais · Bambara · Fulfulde · Songhay</em></div>
 <div class="splash-pills">
-<span class="sp" onclick="ask(this.textContent)">Comment créer une entreprise ?</span>
+<span class="sp" onclick="ask(this.textContent)">Comment creer une entreprise ?</span>
 <span class="sp" onclick="ask(this.textContent)">Traitement du paludisme</span>
-<span class="sp" onclick="ask(this.textContent)">I bɛ mun kɛ?</span>
+<span class="sp" onclick="ask(this.textContent)">I be mun ke?</span>
 <span class="sp" onclick="ask(this.textContent)">Passeport au Mali</span>
 <span class="sp" onclick="ask(this.textContent)">Prix du mil</span>
-<span class="sp" onclick="ask(this.textContent)">Bourse à l'étranger</span>
+<span class="sp" onclick="ask(this.textContent)">Bourse a l etranger</span>
 </div>
 </div>
 </div>
 <div class="input-zone">
 <div class="input-row">
 <div class="textarea-wrap">
-<textarea id="inp" placeholder="Écris ta question..." rows="1"></textarea>
+<textarea id="inp" placeholder="Ecris ta question..." rows="1"></textarea>
 </div>
 <button class="btn-mic" id="micBtn" onclick="toggleMic()">🎤</button>
-<button class="btn-send" id="sendBtn" onclick="send()" disabled>➤</button>
+<button class="btn-send" id="sendBtn" onclick="send()" disabled>&#9658;</button>
 </div>
-<div class="mic-hint" id="micHint">Appuie sur 🎤 et parle — Bambara ou Français</div>
+<div class="mic-hint" id="micHint">Appuie sur le micro et parle</div>
 </div>
 </div>
 <script>
 var SYS="Tu es DONNI, la premiere IA malienne. Sois chaleureux. Salue en bambara. Reponds en francais ou bambara. Connais admin Mali NINA passeport INPS, sante paludisme CSREF, agriculture mil riz BNDA, commerce SARL Kafo Jiginew, education BAC USTTB bourses. Reponds a TOUTES les questions. Max 300 mots.";
-var URL="https://api.groq.com/openai/v1/chat/completions";
-var KEY="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";
-var MOD="llama-3.1-8b-instant";
+var ENDPOINT="https://api.groq.com/openai/v1/chat/completions";
+var GROQ_KEY="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";
+var MODEL="llama-3.1-8b-instant";
 var loading=false;
 var recognition=null;
 var isListening=false;
 
-document.getElementById('inp').addEventListener('input',function(){
-  document.getElementById('sendBtn').disabled=this.value.trim()===''||loading;
+document.getElementById("inp").addEventListener("input",function(){
+  document.getElementById("sendBtn").disabled=this.value.trim()===""||loading;
 });
 
-document.getElementById('inp').addEventListener('keydown',function(e){
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}
+document.getElementById("inp").addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}
 });
 
 function send(){
-  var t=document.getElementById('inp').value.trim();
+  var t=document.getElementById("inp").value.trim();
   if(!t||loading)return;
   ask(t);
 }
 
 function ask(text){
   if(!text||loading)return;
-  document.getElementById('splash').style.display='none';
+  document.getElementById("splash").style.display="none";
   loading=true;
-  document.getElementById('sendBtn').disabled=true;
-  document.getElementById('inp').value='';
-
-  addMsg(text,'usr');
+  document.getElementById("sendBtn").disabled=true;
+  document.getElementById("inp").value="";
+  addMsg(text,"usr");
   var ty=addTyping();
-
-  fetch(URL,{
-    method:'POST',
+  fetch(ENDPOINT,{
+    method:"POST",
     headers:{
-      'Content-Type':'application/json',
-      'Authorization':'Bearer '+KEY
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+GROQ_KEY
     },
     body:JSON.stringify({
-      model:MOD,
+      model:MODEL,
       max_tokens:800,
       messages:[
-        {role:'system',content:SYS},
-        {role:'user',content:text}
+        {role:"system",content:SYS},
+        {role:"user",content:text}
       ]
     })
   })
   .then(function(r){return r.json();})
   .then(function(d){
     ty.remove();
-    var rep=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content?d.choices[0].message.content:"Desole erreur. Reessaie.";
-    addMsg(rep,'ai');
+    var rep="Desole erreur. Reessaie.";
+    if(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content){
+      rep=d.choices[0].message.content;
+    }
+    addMsg(rep,"ai");
     speakText(rep);
     loading=false;
-    document.getElementById('sendBtn').disabled=false;
+    document.getElementById("sendBtn").disabled=false;
   })
   .catch(function(){
     ty.remove();
     addMsg("Erreur connexion. Verifie internet.","ai");
     loading=false;
-    document.getElementById('sendBtn').disabled=false;
+    document.getElementById("sendBtn").disabled=false;
   });
 }
 
 function addMsg(text,who){
-  var d=document.createElement('div');
-  d.className='msg msg-'+who;
-  if(who==='ai'){
-    d.innerHTML='<div class="avatar">🦁</div><div class="bubble">'+fmt(text)+'</div>';
+  var chat=document.getElementById("chat");
+  var d=document.createElement("div");
+  d.className="msg msg-"+who;
+  if(who==="ai"){
+    d.innerHTML="<div class=\"avatar\">&#129409;</div><div class=\"bubble\">"+fmt(text)+"</div>";
   }else{
-    d.innerHTML='<div class="bubble">'+esc(text)+'</div>';
+    d.innerHTML="<div class=\"bubble\">"+esc(text)+"</div>";
   }
-  document.getElementById('chat').appendChild(d);
-  setTimeout(function(){document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;},60);
+  chat.appendChild(d);
+  setTimeout(function(){chat.scrollTop=chat.scrollHeight;},60);
   return d;
 }
 
 function addTyping(){
-  var d=document.createElement('div');
-  d.className='msg msg-ai';
-  d.innerHTML='<div class="avatar">🦁</div><div class="typing"><div class="dots"><div class="dot-b"></div><div class="dot-b"></div><div class="dot-b"></div></div><span class="typing-txt">Donni reflechit...</span></div>';
-  document.getElementById('chat').appendChild(d);
-  setTimeout(function(){document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;},60);
+  var chat=document.getElementById("chat");
+  var d=document.createElement("div");
+  d.className="msg msg-ai";
+  d.innerHTML="<div class=\"avatar\">&#129409;</div><div class=\"typing\"><div class=\"dots\"><div class=\"dot-b\"></div><div class=\"dot-b\"></div><div class=\"dot-b\"></div></div><span class=\"typing-txt\">Donni reflechit...</span></div>";
+  chat.appendChild(d);
+  setTimeout(function(){chat.scrollTop=chat.scrollHeight;},60);
   return d;
 }
 
 function fmt(t){
-  return t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/^[-] (.+)$/gm,'<div style="padding-left:10px">• $1</div>')
-    .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+  return t.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/^- (.+)$/gm,"<div style=\"padding-left:10px\">• $1</div>")
+    .replace(/\n\n/g,"<br><br>").replace(/\n/g,"<br>");
 }
 
 function esc(t){
-  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
 function speakText(text){
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
-  var clean=text.replace(/<[^>]+>/g,'').replace(/[*#_]/g,'');
+  var clean=text.replace(/<[^>]+>/g,"").replace(/[*#_]/g,"");
   var u=new SpeechSynthesisUtterance(clean);
-  u.lang='fr-FR';u.rate=0.92;
+  u.lang="fr-FR";u.rate=0.92;
   window.speechSynthesis.speak(u);
 }
 
 function toggleMic(){
-  if(isListening){
-    if(recognition)recognition.stop();
-    return;
-  }
+  if(isListening){if(recognition)recognition.stop();return;}
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){
-    document.getElementById('micHint').textContent='Voix non supportee. Utilise Chrome.';
-    return;
-  }
+  if(!SR){document.getElementById("micHint").textContent="Voix non supportee. Utilise Chrome.";return;}
   recognition=new SR();
   recognition.continuous=false;
   recognition.interimResults=true;
-  recognition.lang='fr-FR';
+  recognition.lang="fr-FR";
   recognition.onstart=function(){
     isListening=true;
-    document.getElementById('micBtn').classList.add('listening');
-    document.getElementById('micBtn').textContent='⏹';
-    document.getElementById('micHint').textContent='Ecoute... Parle!';
+    document.getElementById("micBtn").classList.add("listening");
+    document.getElementById("micBtn").textContent="⏹";
+    document.getElementById("micHint").textContent="Ecoute... Parle!";
   };
   recognition.onresult=function(e){
-    var t=Array.from(e.results).map(function(r){return r[0].transcript;}).join('');
-    document.getElementById('inp').value=t;
-    document.getElementById('sendBtn').disabled=false;
+    var t=Array.from(e.results).map(function(r){return r[0].transcript;}).join("");
+    document.getElementById("inp").value=t;
+    document.getElementById("sendBtn").disabled=false;
   };
   recognition.onend=function(){
     isListening=false;
-    document.getElementById('micBtn').classList.remove('listening');
-    document.getElementById('micBtn').textContent='🎤';
-    document.getElementById('micHint').textContent='Appuie sur le micro et parle';
-    if(document.getElementById('inp').value.trim()){
-      setTimeout(function(){send();},300);
-    }
+    document.getElementById("micBtn").classList.remove("listening");
+    document.getElementById("micBtn").textContent="🎤";
+    document.getElementById("micHint").textContent="Appuie sur le micro et parle";
+    if(document.getElementById("inp").value.trim()){setTimeout(function(){send();},300);}
   };
   recognition.onerror=function(){
     isListening=false;
-    document.getElementById('micBtn').classList.remove('listening');
-    document.getElementById('micBtn').textContent='🎤';
+    document.getElementById("micBtn").classList.remove("listening");
+    document.getElementById("micBtn").textContent="🎤";
   };
   recognition.start();
 }
